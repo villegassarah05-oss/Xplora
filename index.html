@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xplora | Juegos Educativos e Interactivos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        },
+                        space: {
+                            800: '#111827',
+                            900: '#0b0f19',
+                            950: '#05070d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', 'Inter', sans-serif; }
+        canvas { touch-action: none; }
+        .glow-brand { box-shadow: 0 0 25px rgba(56, 189, 248, 0.25); }
+        .glow-purple { box-shadow: 0 0 25px rgba(168, 85, 247, 0.25); }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.12);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+        .grade-btn-active {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+            color: #0f172a !important;
+            font-weight: 800 !important;
+            border-color: #fef08a !important;
+            transform: scale(1.03);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-space-950 text-slate-100 h-screen flex flex-col select-none overflow-hidden">
+
+    <!-- BARRA SUPERIOR DE HUD Y SELECTOR DE EDAD/GRADO -->
+    <header class="shrink-0 z-50 glass-panel border-b border-slate-700/80 px-4 py-2.5 bg-slate-900/95">
+        <div class="w-full flex flex-wrap justify-between items-center gap-3">
+            
+            <!-- Título & Logo con Personaje Principal -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchLevel('hub'); speakSlow('¡Hola! Bienvenido a Xplora, la plataforma de juegos educativos adaptados.');">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-pink-500 to-cyan-400 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20 border-2 border-white/20">
+                    🚀
+                </div>
+                <div>
+                    <h1 class="font-black text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-cyan-300 to-pink-300 leading-none">
+                        XPLORA
+                    </h1>
+                    <span class="text-[10px] text-amber-300 font-bold tracking-wider">Aprender Jugando • Adaptado por Edades</span>
+                </div>
+            </div>
+
+            <!-- SELECTOR DE ETAPA ESCOLAR (PRE-KÍNDER A 5º PRIMARIA) -->
+            <div class="flex items-center gap-1.5 overflow-x-auto justify-center">
+                <span class="text-xs font-bold text-slate-400 mr-1 hidden xl:inline">Grado:</span>
+                <button onclick="setGrade('prek')" id="grade-prek" class="grade-btn grade-btn-active px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-slate-200 transition shrink-0 flex items-center gap-1">
+                    👶 Pre-K / Kínder (3-5)
+                </button>
+                <button onclick="setGrade('p1_3')" id="grade-p1_3" class="grade-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-slate-200 transition shrink-0 flex items-center gap-1">
+                    🎒 1º a 3º Primaria (6-8)
+                </button>
+                <button onclick="setGrade('p4_5')" id="grade-p4_5" class="grade-btn px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-slate-200 transition shrink-0 flex items-center gap-1">
+                    🚀 4º y 5º Primaria (9-11)
+                </button>
+            </div>
+
+            <!-- Botones de Voz y Guía Didáctica -->
+            <div class="flex items-center gap-2">
+                <button onclick="toggleVoiceGuide()" id="btnVoiceToggle" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/40 border border-emerald-400/50 text-emerald-300 text-xs font-bold transition flex items-center gap-1.5">
+                    <span>🔊</span>
+                    <span id="voiceStatusText">Voz: ON</span>
+                </button>
+                <button onclick="toggleDidacticModal()" class="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/40 text-purple-200 text-xs font-semibold transition flex items-center gap-1.5">
+                    <span>📘</span>
+                    <span class="hidden sm:inline">Guía Pedagógica</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL DIVIDIDO ESTRICTAMENTE EN SIDEBAR LATERAL + FRAME DE LECTURA/JUEGO -->
+    <div class="flex-grow flex flex-row overflow-hidden w-full">
+        
+        <!-- BARRA ESTRICTAMENTE LATERAL (IZQUIERDA) -->
+        <aside class="w-16 sm:w-64 shrink-0 bg-space-900/95 border-r border-slate-800 p-2 sm:p-4 flex flex-col justify-between overflow-y-auto z-40">
+            <div class="space-y-2">
+                <div class="hidden sm:block text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 py-1">
+                    🧭 Navegación
+                </div>
+                <nav id="quickNavContainer" class="flex flex-col gap-2 w-full">
+                    <!-- Rellenado dinámicamente según el grado -->
+                </nav>
+            </div>
+
+            <!-- Mini tarjeta de estado en el pie del sidebar -->
+            <div class="hidden sm:block mt-4 p-3 rounded-2xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+                <div class="font-bold text-amber-300 flex items-center gap-1.5">
+                    <span>😸</span> Asistente Xplora
+                </div>
+                <p class="leading-tight">Usa el menú lateral para cambiar de actividad sin perder tu progreso.</p>
+            </div>
+        </aside>
+
+        <!-- FRAME DE LECTURA Y JUEGO (DERECHA - INDEPENDIENTE DEL SIDEBAR) -->
+        <div class="flex-grow flex flex-col overflow-y-auto bg-space-950">
+            
+            <!-- BANNER DE GUÍA DE PERSONAJE DENTRO DEL FRAME DE LECTURA -->
+            <section class="shrink-0 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-cyan-500/10 border-b border-slate-800/80 py-2.5 px-4 sm:px-6">
+                <div class="max-w-5xl mx-auto flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-amber-400 border-2 border-white text-lg flex items-center justify-center shrink-0 shadow-md">
+                        😸
+                    </div>
+                    <div class="flex-grow">
+                        <p id="guideSpeechBubble" class="text-xs sm:text-sm font-semibold text-amber-200 leading-snug">
+                            "¡Bienvenido a Xplora! Hemos adaptado los juegos especialmente para la edad de tu grado."
+                        </p>
+                    </div>
+                    <button onclick="speakCurrentGuideText()" class="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold text-xs transition shrink-0 flex items-center gap-1 shadow-md">
+                        <span>🗣️</span> <span class="hidden sm:inline">Escuchar</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ÁREA DE CONTENIDO / JUEGOS -->
+            <main class="flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col justify-center">
+
+                <!-- PANTALLA 0: HUB CENTRAL / CATÁLOGO DE JUEGOS -->
+                <section id="level-hub" class="level-screen flex flex-col items-center justify-center space-y-6">
+                    <div class="text-center max-w-3xl mx-auto space-y-2">
+                        <span id="gradeBadgeLabel" class="px-3.5 py-1 rounded-full text-xs font-black bg-amber-400 text-slate-900 border border-amber-300 shadow-sm">
+                            MODO ADAPTADO: PRE-KÍNDER Y KÍNDER (3 - 5 AÑOS)
+                        </span>
+                        <h2 class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-white to-cyan-300">
+                            Juegos Interactivos Xplora
+                        </h2>
+                        <p id="hubDescriptionText" class="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl mx-auto">
+                            Actividades diseñadas específicamente para el nivel cognitivo y motor seleccionado.
+                        </p>
+                    </div>
+
+                    <div id="gamesGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full">
+                        <!-- Se renderizan dinámicamente las tarjetas según el Grado activo -->
+                    </div>
+                </section>
+
+                <!-- JUEGO 1: LA RULETA -->
+                <section id="level-ruleta" class="level-screen hidden flex-grow flex flex-col">
+                    <div class="glass-panel rounded-3xl p-5 sm:p-6 flex-grow flex flex-col justify-between border-2 border-purple-400/40 glow-purple">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <div>
+                                <span id="game1Badge" class="text-[11px] font-black text-purple-300 uppercase tracking-widest bg-purple-900/60 px-2.5 py-1 rounded-lg">DINÁMICA ADAPTADA</span>
+                                <h2 id="game1Title" class="text-xl sm:text-2xl font-black text-white mt-1">La Ruleta Interactiva</h2>
+                                <p id="game1Desc" class="text-slate-300 text-xs">Presiona "Girar Ruleta" para descubrir una sorpresa.</p>
+                            </div>
+                            <button onclick="switchLevel('hub')" class="shrink-0 text-xs font-bold bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl border border-slate-600 text-amber-300">← Menú</button>
+                        </div>
+
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-6 my-4">
+                            <div class="relative w-60 h-60 sm:w-72 sm:h-72 flex items-center justify-center">
+                                <div class="absolute top-0 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[24px] border-t-amber-400 z-20"></div>
+                                <canvas id="wheelCanvas" class="w-full h-full rounded-full shadow-2xl border-4 border-slate-700"></canvas>
+                            </div>
+
+                            <div class="glass-panel p-5 rounded-2xl max-w-md w-full text-center space-y-4">
+                                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Resultado de la Ruleta:</h3>
+                                <div id="wheelResult" class="text-base sm:text-lg font-black text-amber-300 min-h-[70px] flex items-center justify-center bg-space-950/80 p-4 rounded-xl border border-slate-700">
+                                    ¡Toca el botón para girar!
+                                </div>
+                                <button onclick="spinWheel()" id="spinBtn" class="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-black text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                                    <span>🎡</span> Girar Ruleta
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- JUEGO 2: ASOCIACIÓN / MEMORIA / PAREJAS -->
+                <section id="level-parejas" class="level-screen hidden flex-grow flex flex-col">
+                    <div class="glass-panel rounded-3xl p-5 sm:p-6 flex-grow flex flex-col justify-between border-2 border-pink-400/40">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <div>
+                                <span id="game2Badge" class="text-[11px] font-black text-pink-300 uppercase tracking-widest bg-pink-900/60 px-2.5 py-1 rounded-lg">DINÁMICA VISUAL</span>
+                                <h2 id="game2Title" class="text-xl sm:text-2xl font-black text-white mt-1">Juego de Figuras e Imágenes</h2>
+                                <p id="game2Desc" class="text-slate-300 text-xs">Instrucciones del juego según tu grado escolar.</p>
+                            </div>
+                            <button onclick="switchLevel('hub')" class="shrink-0 text-xs font-bold bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl border border-slate-600 text-amber-300">← Menú</button>
+                        </div>
+
+                        <div id="memoryGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4 max-w-2xl mx-auto w-full">
+                            <!-- Cards dynamic via JS -->
+                        </div>
+
+                        <div class="flex justify-between items-center text-xs font-bold text-slate-300 bg-space-950 p-3 rounded-xl border border-slate-800">
+                            <span id="memoryScore">Progreso: 0</span>
+                            <button onclick="initMemoryGame()" class="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition">Reiniciar Actividad</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- JUEGO 3: MEZCLADOR / BALANZA / CÁLCULO -->
+                <section id="level-balanza" class="level-screen hidden flex-grow flex flex-col">
+                    <div class="glass-panel rounded-3xl p-5 sm:p-6 flex-grow flex flex-col justify-between border-2 border-emerald-400/40">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <div>
+                                <span id="game3Badge" class="text-[11px] font-black text-emerald-300 uppercase tracking-widest bg-emerald-900/60 px-2.5 py-1 rounded-lg">RAZONAMIENTO APLICADO</span>
+                                <h2 id="game3Title" class="text-xl sm:text-2xl font-black text-white mt-1">Actividad Lógico-Matemática</h2>
+                                <p id="game3Desc" class="text-slate-300 text-xs">Completa el reto interactivo.</p>
+                            </div>
+                            <button onclick="switchLevel('hub')" class="shrink-0 text-xs font-bold bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl border border-slate-600 text-amber-300">← Menú</button>
+                        </div>
+
+                        <div class="relative w-full h-56 sm:h-64 bg-space-950 rounded-2xl my-2 border-2 border-slate-800 flex items-center justify-center" id="balanceContainer">
+                            <canvas id="balanceCanvas" class="w-full h-full"></canvas>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-space-950 p-4 rounded-xl border border-slate-800">
+                            <div id="balanceFeedback" class="text-xs font-extrabold text-amber-300">
+                                Añade elementos para interactuar.
+                            </div>
+                            <div class="flex gap-2 flex-wrap justify-center" id="weightButtons">
+                                <!-- Weight buttons via JS -->
+                            </div>
+                            <button onclick="resetBalanceTarget()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-bold rounded-xl border border-slate-600">Nuevo Reto</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- JUEGO 4: CLASIFICADOR / CATEGORIZACIÓN -->
+                <section id="level-clasificador" class="level-screen hidden flex-grow flex flex-col">
+                    <div class="glass-panel rounded-3xl p-5 sm:p-6 flex-grow flex flex-col justify-between border-2 border-cyan-400/40">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <div>
+                                <span id="game4Badge" class="text-[11px] font-black text-cyan-300 uppercase tracking-widest bg-cyan-900/60 px-2.5 py-1 rounded-lg">DESARROLLO CATEGÓRICO</span>
+                                <h2 id="game4Title" class="text-xl sm:text-2xl font-black text-white mt-1">Clasificador de Elementos</h2>
+                                <p id="game4Desc" class="text-slate-300 text-xs">Clasifica los elementos en las cajas correctas.</p>
+                            </div>
+                            <button onclick="switchLevel('hub')" class="shrink-0 text-xs font-bold bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl border border-slate-600 text-amber-300">← Menú</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                            <!-- Categoria 1 -->
+                            <div id="catPlanets" class="glass-panel p-4 rounded-2xl border-2 border-cyan-500/30 min-h-[150px] flex flex-col items-center cursor-pointer">
+                                <h3 id="cat1Title" class="text-sm font-black text-cyan-300 mb-2">🪐 PLANETAS</h3>
+                                <div id="boxPlanets" class="flex flex-wrap gap-2 justify-center w-full min-h-[90px] bg-space-950/60 p-3 rounded-xl border border-slate-800">
+                                </div>
+                            </div>
+                            <!-- Categoria 2 -->
+                            <div id="catStars" class="glass-panel p-4 rounded-2xl border-2 border-amber-500/30 min-h-[150px] flex flex-col items-center cursor-pointer">
+                                <h3 id="cat2Title" class="text-sm font-black text-amber-300 mb-2">⭐ ESTRELLAS</h3>
+                                <div id="boxStars" class="flex flex-wrap gap-2 justify-center w-full min-h-[90px] bg-space-950/60 p-3 rounded-xl border border-slate-800">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-space-950 p-4 rounded-2xl border border-slate-800 flex flex-col items-center gap-3">
+                            <span class="text-xs font-bold text-slate-400">Objetos por clasificar (Toca un objeto y luego su caja):</span>
+                            <div id="itemPool" class="flex flex-wrap gap-3 justify-center min-h-[45px]">
+                                <!-- Dynamic items -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- JUEGO 5: CAZA-ATENCIÓN / GLOBOS -->
+                <section id="level-caza" class="level-screen hidden flex-grow flex flex-col">
+                    <div class="glass-panel rounded-3xl p-5 sm:p-6 flex-grow flex flex-col justify-between border-2 border-amber-400/40">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <div>
+                                <span id="game5Badge" class="text-[11px] font-black text-amber-300 uppercase tracking-widest bg-amber-900/60 px-2.5 py-1 rounded-lg">DESARROLLO MOTOR Y FOCO</span>
+                                <h2 id="game5Title" class="text-xl sm:text-2xl font-black text-white mt-1">Caza-Atención Xplora</h2>
+                                <p id="game5Desc" class="text-slate-300 text-xs">Sigue las instrucciones táctiles.</p>
+                            </div>
+                            <button onclick="switchLevel('hub')" class="shrink-0 text-xs font-bold bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl border border-slate-600 text-amber-300">← Menú</button>
+                        </div>
+
+                        <div id="whackGrid" class="grid grid-cols-3 gap-3 sm:gap-4 my-4 max-w-lg mx-auto w-full">
+                            <div onclick="hitCrater(0)" id="crater-0" class="h-24 sm:h-28 bg-space-950 rounded-2xl border-2 border-slate-800 flex items-center justify-center text-4xl cursor-pointer hover:border-amber-400 transition select-none">🕳️</div>
+                            <div onclick="hitCrater(1)" id="crater-1" class="h-24 sm:h-28 bg-space-950 rounded-2xl border-2 border-slate-800 flex items-center justify-center text-4xl cursor-pointer hover:border-amber-400 transition select-none">🕳️</div>
+                            <div onclick="hitCrater(2)" id="crater-2" class="h-24 sm:h-28 bg-space-950 rounded-2xl border-2 border-slate-800 flex items-center justify-center text-4xl cursor-pointer hover:border-amber-400 transition select-none">🕳️</div>
+                            <div onclick="hitCrater(3)" id="crater-3" class="h-24 sm:h-28 bg-space-950 rounded-2xl border-2 border-slate-800 flex items-center justify-center text-4xl cursor-pointer hover:border-amber-400 transition select-none">🕳️</div>
+                            <div onclick="hitCrater(4)" id="crater-4" class="h-24 sm:h-28 bg-space-950 rounded-2xl border-2 border-slate-800 flex items-center justify-center text-4xl cursor-pointer hover:border-amber-400 transition select-none">🕳️</div>
+                            <div onclick="hitCrater(5)" id="crater-5" class="h-24 sm:h-28 bg-space-950 rounded-2xl border-2 border-slate-800 flex items-center justify-center text-4xl cursor-pointer hover:border-amber-400 transition select-none">🕳️</div>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-space-950 p-3.5 rounded-xl border border-slate-800 text-xs font-extrabold">
+                            <span id="whackScore" class="text-amber-300">Puntos: 0</span>
+                            <button onclick="startWhackGame()" id="whackStartBtn" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl transition">Comenzar</button>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL GUÍA PEDAGÓGICA XPLORA -->
+    <div id="didacticModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel max-w-xl w-full p-6 rounded-3xl border-2 border-purple-400/50 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="text-lg font-black text-amber-300 flex items-center gap-2">📘 Guía Didáctica Xplora por Edad</h3>
+                <button onclick="toggleDidacticModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                En <b>Xplora</b> adaptamos la carga cognitiva y el tipo de interacción según la etapa de desarrollo:
+            </p>
+            <ul class="text-xs text-slate-300 space-y-2.5 list-disc pl-4">
+                <li><b>👶 Pre-Kínder (3-5 años):</b> Sin memoria a ciegas ni penalizaciones. Enfocado en estimulación sensorial, reconocimiento visible de colores/animales, motricidad fina (explotar globos) y emociones.</li>
+                <li><b>🎒 1º a 3º Primaria (6-8 años):</b> Memoria operativa con pares de cartas, sumas simples en balanza, discriminación visual y categorización concreta (Planeta/Estrella).</li>
+                <li><b>🚀 4º y 5º Primaria (9-11 años):</b> Retos de atención rápida, categorización conceptual avanzada (Sólido/Gaseoso), cálculo mental acelerado y preguntas de lógica.</li>
+            </ul>
+            <div class="pt-2 text-center">
+                <button onclick="toggleDidacticModal()" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs rounded-xl">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LÓGICA DE JUEGOS XPLORA -->
+    <script>
+        let currentGrade = 'prek';
+        let voiceEnabled = true;
+
+        const gradeConfigs = {
+            prek: {
+                label: "MODO ADAPTADO: PRE-KÍNDER Y KÍNDER (3 - 5 AÑOS)",
+                speech: "Modo Pre-Kínder activado en Xplora. Actividades sencillas de colores, formas e imágenes visibles.",
+                hubDesc: "Diseñado para niños de 3 a 5 años: reconocimiento visual directo, sonidos, colores y estimulación fina sin frustración.",
+                nav: [
+                    { id: 'ruleta', icon: '🎡', name: '1. Ruleta Emociones' },
+                    { id: 'parejas', icon: '🧩', name: '2. Buscar Figura' },
+                    { id: 'balanza', icon: '🎨', name: '3. Pintar Colores' },
+                    { id: 'clasificador', icon: '🐾', name: '4. Animales' },
+                    { id: 'caza', icon: '🎈', name: '5. Globos' }
+                ],
+                wheelOptions: ["Haz una cara feliz 😃", "Toca tu nariz 👃", "Di ¡Hola! 👋", "Haz sonido de gato 🐱", "Toma aire profundo 🌬️", "Baila un segundo 💃"],
+                wheelColors: ['#ec4899', '#f59e0b', '#10b981', '#38bdf8', '#8b5cf6', '#f43f5e'],
+                game1: { title: "La Ruleta de las Emociones y Gestos", desc: "¡Gira la ruleta y haz la acción o cara que aparece!" },
+                game2: { title: "Encuentra la Figura Visible", desc: "Toca las dos figuras que son exactamente IGUALES (visibles todo el tiempo)." },
+                game3: { title: "Pintor Cósmico de Colores", desc: "Toca los botones para pintar el planeta del color que quieras." },
+                game4: { title: "Clasificador de Mascotas y Aves", desc: "Selecciona el animal e indica si vive en la Tierra o vuela por el Cielo." },
+                game5: { title: "Explotar Globos Mágicos", desc: "Toca los globos de colores 🎈 cuando aparezcan. ¡Todos suman puntos!" }
+            },
+            p1_3: {
+                label: "MODO ADAPTADO: 1º A 3º DE PRIMARIA (6 - 8 AÑOS)",
+                speech: "Modo Primero a Tercero activado en Xplora. Memoria, operaciones sencillas y atención.",
+                hubDesc: "Para niños de 6 a 8 años: memoria operativa de parejas, sumas en balanza y concentración selectiva.",
+                nav: [
+                    { id: 'ruleta', icon: '🎡', name: '1. Ruleta Saber' },
+                    { id: 'parejas', icon: '🃏', name: '2. Parejas' },
+                    { id: 'balanza', icon: '⚖️', name: '3. Balanza Sumas' },
+                    { id: 'clasificador', icon: '🌌', name: '4. Planeta/Estrella' },
+                    { id: 'caza', icon: '🎯', name: '5. Caza-Atención' }
+                ],
+                wheelOptions: ["¿Cuánto es 3 + 4? 🔢", "Di un color brillante 🎨", "Menciona un planeta 🪐", "Cuenta hasta 10 ⏱️", "Estira tus brazos 🧘", "Nombra un animal 🦁"],
+                wheelColors: ['#8b5cf6', '#ec4899', '#10b981', '#0ea5e9', '#f59e0b', '#6366f1'],
+                game1: { title: "La Ruleta del Saber", desc: "Gira la ruleta y responde preguntas divertidas." },
+                game2: { title: "Parejas de Memoria Oculta", desc: "Voltea las cartas secretas y encuentra los pares idénticos." },
+                game3: { title: "Balanza Matemática Básica", desc: "Añade números al lado derecho hasta dar la suma idéntica al lado izquierdo." },
+                game4: { title: "Clasificador Planeta o Estrella", desc: "Separa los cuerpos celestes según su tipo." },
+                game5: { title: "Caza de Estrellas Doradas", desc: "Toca ÚNICAMENTE la estrella ⭐. Evita las rocas oscuras." }
+            },
+            p4_5: {
+                label: "MODO ADAPTADO: 4º Y 5º DE PRIMARIA (9 - 11 AÑOS)",
+                speech: "Modo Cuarto y Quinto activado en Xplora. Retos de multiplicaciones, lógica rápida y atención.",
+                hubDesc: "Para estudiantes de 9 a 11 años: lógica, multiplicaciones, estados de materia y velocidad.",
+                nav: [
+                    { id: 'ruleta', icon: '⚙️', name: '1. Ruleta Lógica' },
+                    { id: 'parejas', icon: '🧠', name: '2. Multiplicar' },
+                    { id: 'balanza', icon: '⚖️', name: '3. Balanza Op.' },
+                    { id: 'clasificador', icon: '🧪', name: '4. Materia' },
+                    { id: 'caza', icon: '⚡', name: '5. Caza Rápida' }
+                ],
+                wheelOptions: ["¿Cuánto es 7 x 8? 🧠", "Un elemento gaseoso 💨", "Capital de un país 🌍", "Resuelve 50 - 15 🔢", "Sinónimo de Veloz ⚡", "Cita una regla de clase 📜"],
+                wheelColors: ['#0ea5e9', '#8b5cf6', '#f59e0b', '#ec4899', '#10b981', '#6366f1'],
+                game1: { title: "Ruleta de Desafíos Cognitivos", desc: "Preguntas de cálculo mental rápido y conceptos científicos." },
+                game2: { title: "Parejas Operativas (Tabla/Resultado)", desc: "Encuentra la multiplicación y su resultado correspondiente." },
+                game3: { title: "Balanza de Pesas Compuestas", desc: "Equilibra con operaciones mayores y mayor precisión." },
+                game4: { title: "Clasificador de Estados de la Materia", desc: "Clasifica los elementos entre Sólidos y Gaseosos." },
+                game5: { title: "Caza-Reflejos Acelerada", desc: "Reacción ultra-rápida. Cuidado con los objetos trampa." }
+            }
+        };
+
+        function setGrade(gradeKey) {
+            currentGrade = gradeKey;
+            document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('grade-btn-active'));
+            document.getElementById('grade-' + gradeKey).classList.add('grade-btn-active');
+
+            const conf = gradeConfigs[gradeKey];
+            document.getElementById('gradeBadgeLabel').innerText = conf.label;
+            document.getElementById('hubDescriptionText').innerText = conf.hubDesc;
+
+            document.getElementById('game1Title').innerText = conf.game1.title;
+            document.getElementById('game1Desc').innerText = conf.game1.desc;
+            document.getElementById('game2Title').innerText = conf.game2.title;
+            document.getElementById('game2Desc').innerText = conf.game2.desc;
+            document.getElementById('game3Title').innerText = conf.game3.title;
+            document.getElementById('game3Desc').innerText = conf.game3.desc;
+            document.getElementById('game4Title').innerText = conf.game4.title;
+            document.getElementById('game4Desc').innerText = conf.game4.desc;
+            document.getElementById('game5Title').innerText = conf.game5.title;
+            document.getElementById('game5Desc').innerText = conf.game5.desc;
+
+            renderQuickNav();
+            renderGamesHubGrid();
+            speakSlow(conf.speech);
+
+            initBalanceGame();
+            initClassifier();
+            initMemoryGame();
+            drawWheel();
+        }
+
+        function renderQuickNav() {
+            const container = document.getElementById('quickNavContainer');
+            if (!container) return;
+            const items = gradeConfigs[currentGrade].nav;
+
+            let html = `<button onclick="switchLevel('hub')" title="Menú Principal" class="w-full text-center sm:text-left px-2 sm:px-3.5 py-2.5 rounded-xl bg-slate-800/80 hover:bg-brand-500/20 hover:text-brand-300 text-slate-200 border border-slate-700/80 transition flex items-center justify-center sm:justify-start gap-2.5 text-xs font-bold shadow-sm"><span class="text-base">🚀</span> <span class="hidden sm:inline truncate">Menú Principal</span></button>`;
+            items.forEach(item => {
+                html += `<button onclick="switchLevel('${item.id}')" title="${item.name}" class="w-full text-center sm:text-left px-2 sm:px-3.5 py-2.5 rounded-xl bg-slate-900/60 hover:bg-purple-500/20 hover:text-purple-300 text-slate-200 border border-slate-800 transition flex items-center justify-center sm:justify-start gap-2.5 text-xs font-bold"><span class="text-base">${item.icon}</span> <span class="hidden sm:inline truncate">${item.name}</span></button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderGamesHubGrid() {
+            const grid = document.getElementById('gamesGrid');
+            if (!grid) return;
+            const conf = gradeConfigs[currentGrade];
+
+            grid.innerHTML = `
+                <div onclick="switchLevel('ruleta')" class="glass-panel p-5 rounded-3xl hover:border-purple-400 transition cursor-pointer group hover:-translate-y-1 duration-300 flex flex-col justify-between bg-purple-950/20">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-2xl group-hover:scale-110 transition border-2 border-purple-300/40 shadow-lg">
+                            ${conf.nav[0].icon}
+                        </div>
+                        <h3 class="text-lg font-black text-white group-hover:text-purple-300 transition">1. ${conf.game1.title}</h3>
+                        <p class="text-slate-300 text-xs leading-relaxed">${conf.game1.desc}</p>
+                    </div>
+                    <div class="mt-5 flex justify-between items-center text-xs font-bold text-purple-300 bg-purple-900/40 px-3 py-2 rounded-xl">
+                        <span>▶️ JUGAR AHORA</span>
+                        <span>Adaptado</span>
+                    </div>
+                </div>
+
+                <div onclick="switchLevel('parejas')" class="glass-panel p-5 rounded-3xl hover:border-pink-400 transition cursor-pointer group hover:-translate-y-1 duration-300 flex flex-col justify-between bg-pink-950/20">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-2xl group-hover:scale-110 transition border-2 border-pink-300/40 shadow-lg">
+                            ${conf.nav[1].icon}
+                        </div>
+                        <h3 class="text-lg font-black text-white group-hover:text-pink-300 transition">2. ${conf.game2.title}</h3>
+                        <p class="text-slate-300 text-xs leading-relaxed">${conf.game2.desc}</p>
+                    </div>
+                    <div class="mt-5 flex justify-between items-center text-xs font-bold text-pink-300 bg-pink-900/40 px-3 py-2 rounded-xl">
+                        <span>▶️ JUGAR AHORA</span>
+                        <span>Adaptado</span>
+                    </div>
+                </div>
+
+                <div onclick="switchLevel('balanza')" class="glass-panel p-5 rounded-3xl hover:border-emerald-400 transition cursor-pointer group hover:-translate-y-1 duration-300 flex flex-col justify-between bg-emerald-950/20">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-2xl group-hover:scale-110 transition border-2 border-emerald-300/40 shadow-lg">
+                            ${conf.nav[2].icon}
+                        </div>
+                        <h3 class="text-lg font-black text-white group-hover:text-emerald-300 transition">3. ${conf.game3.title}</h3>
+                        <p class="text-slate-300 text-xs leading-relaxed">${conf.game3.desc}</p>
+                    </div>
+                    <div class="mt-5 flex justify-between items-center text-xs font-bold text-emerald-300 bg-emerald-900/40 px-3 py-2 rounded-xl">
+                        <span>▶️ JUGAR AHORA</span>
+                        <span>Adaptado</span>
+                    </div>
+                </div>
+
+                <div onclick="switchLevel('clasificador')" class="glass-panel p-5 rounded-3xl hover:border-cyan-400 transition cursor-pointer group hover:-translate-y-1 duration-300 flex flex-col justify-between bg-cyan-950/20">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-2xl group-hover:scale-110 transition border-2 border-cyan-300/40 shadow-lg">
+                            ${conf.nav[3].icon}
+                        </div>
+                        <h3 class="text-lg font-black text-white group-hover:text-cyan-300 transition">4. ${conf.game4.title}</h3>
+                        <p class="text-slate-300 text-xs leading-relaxed">${conf.game4.desc}</p>
+                    </div>
+                    <div class="mt-5 flex justify-between items-center text-xs font-bold text-cyan-300 bg-cyan-900/40 px-3 py-2 rounded-xl">
+                        <span>▶️ JUGAR AHORA</span>
+                        <span>Adaptado</span>
+                    </div>
+                </div>
+
+                <div onclick="switchLevel('caza')" class="glass-panel p-5 rounded-3xl hover:border-amber-400 transition cursor-pointer group hover:-translate-y-1 duration-300 flex flex-col justify-between bg-amber-950/20 md:col-span-2">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-2xl group-hover:scale-110 transition border-2 border-amber-300/40 shadow-lg">
+                            ${conf.nav[4].icon}
+                        </div>
+                        <h3 class="text-lg font-black text-white group-hover:text-amber-300 transition">5. ${conf.game5.title}</h3>
+                        <p class="text-slate-300 text-xs leading-relaxed">${conf.game5.desc}</p>
+                    </div>
+                    <div class="mt-5 flex justify-between items-center text-xs font-bold text-amber-300 bg-amber-900/40 px-3 py-2 rounded-xl">
+                        <span>▶️ JUGAR AHORA</span>
+                        <span>Adaptado</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleVoiceGuide() {
+            voiceEnabled = !voiceEnabled;
+            document.getElementById('voiceStatusText').innerText = voiceEnabled ? "Voz: ON" : "Voz: OFF";
+            if (voiceEnabled) speakSlow("Voz activada en Xplora.");
+            else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        }
+
+        function speakSlow(text) {
+            const bubble = document.getElementById('guideSpeechBubble');
+            if (bubble) bubble.innerText = `"${text}"`;
+
+            if (!voiceEnabled || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            utterance.rate = (currentGrade === 'prek') ? 0.65 : (currentGrade === 'p1_3' ? 0.8 : 0.9);
+            utterance.pitch = 1.1;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function speakCurrentGuideText() {
+            const bubble = document.getElementById('guideSpeechBubble');
+            if (bubble) speakSlow(bubble.innerText.replace(/"/g, ''));
+        }
+
+        function switchLevel(levelId) {
+            isWhackActive = false;
+            clearTimeout(whackTimer);
+            const whackBtn = document.getElementById('whackStartBtn');
+            if (whackBtn) whackBtn.innerText = "Comenzar";
+
+            document.querySelectorAll('.level-screen').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById('level-' + levelId);
+            if (target) target.classList.remove('hidden');
+
+            const conf = gradeConfigs[currentGrade];
+            if (levelId === 'hub') speakSlow("¡Menú Principal de Xplora! Selecciona un juego.");
+            if (levelId === 'ruleta') { drawWheel(); speakSlow(conf.game1.title); }
+            if (levelId === 'parejas') { initMemoryGame(); speakSlow(conf.game2.title); }
+            if (levelId === 'balanza') { initBalanceGame(); speakSlow(conf.game3.title); }
+            if (levelId === 'clasificador') { initClassifier(); speakSlow(conf.game4.title); }
+            if (levelId === 'caza') { speakSlow(conf.game5.title); }
+        }
+
+        function toggleDidacticModal() {
+            document.getElementById('didacticModal').classList.toggle('hidden');
+        }
+
+        // 1. RULETA DINÁMICA POR EDAD
+        const wheelCanvas = document.getElementById('wheelCanvas');
+        const wheelCtx = wheelCanvas ? wheelCanvas.getContext('2d') : null;
+        let wheelAngle = 0;
+        let isSpinning = false;
+
+        function drawWheel() {
+            if (!wheelCanvas || !wheelCtx) return;
+            wheelCanvas.width = 300;
+            wheelCanvas.height = 300;
+
+            const conf = gradeConfigs[currentGrade];
+            const options = conf.wheelOptions;
+            const colors = conf.wheelColors;
+            const numOptions = options.length;
+            const arcSize = (2 * Math.PI) / numOptions;
+
+            wheelCtx.clearRect(0, 0, 300, 300);
+
+            for (let i = 0; i < numOptions; i++) {
+                const angle = wheelAngle + i * arcSize;
+                wheelCtx.beginPath();
+                wheelCtx.fillStyle = colors[i % colors.length];
+                wheelCtx.moveTo(150, 150);
+                wheelCtx.arc(150, 150, 140, angle, angle + arcSize);
+                wheelCtx.fill();
+                wheelCtx.strokeStyle = "#0f172a";
+                wheelCtx.lineWidth = 2;
+                wheelCtx.stroke();
+
+                wheelCtx.save();
+                wheelCtx.translate(150, 150);
+                wheelCtx.rotate(angle + arcSize / 2);
+                wheelCtx.fillStyle = "#ffffff";
+                wheelCtx.font = "bold 11px Outfit, sans-serif";
+                wheelCtx.textAlign = "right";
+                wheelCtx.fillText(options[i].substring(0, 22), 125, 4);
+                wheelCtx.restore();
+            }
+        }
+
+        function spinWheel() {
+            if (isSpinning) return;
+            isSpinning = true;
+            document.getElementById('wheelResult').innerText = "¡Girando en Xplora!...";
+
+            const spinAngleTotal = Math.PI * 2 * (4 + Math.random() * 4);
+            let currentSpin = 0;
+            const spinInterval = setInterval(() => {
+                currentSpin += 0.15;
+                wheelAngle += (spinAngleTotal - currentSpin) * 0.015;
+                drawWheel();
+
+                if (currentSpin >= spinAngleTotal - 0.5) {
+                    clearInterval(spinInterval);
+                    isSpinning = false;
+
+                    const options = gradeConfigs[currentGrade].wheelOptions;
+                    const numOptions = options.length;
+                    const arcSize = (2 * Math.PI) / numOptions;
+                    const normalizedAngle = (2 * Math.PI - (wheelAngle % (2 * Math.PI))) % (2 * Math.PI);
+                    const pointerAngle = (3 * Math.PI / 2 + normalizedAngle) % (2 * Math.PI);
+                    const selectedIndex = Math.floor(pointerAngle / arcSize) % numOptions;
+
+                    const resultText = options[selectedIndex];
+                    document.getElementById('wheelResult').innerText = resultText;
+                    speakSlow("Resultado: " + resultText);
+                }
+            }, 20);
+        }
+
+        // 2. JUEGO DE PAREJAS / VISUAL ADAPTADO
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let prekSelectedCard = null;
+
+        function initMemoryGame() {
+            const grid = document.getElementById('memoryGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            matchedPairs = 0;
+            flippedCards = [];
+            prekSelectedCard = null;
+
+            if (currentGrade === 'prek') {
+                document.getElementById('memoryScore').innerText = "Encuentra 2 elementos idénticos que están a la vista.";
+                const icons = ['🐶', '🐱', '🐸', '🦁'];
+                const deck = [...icons, ...icons].sort(() => Math.random() - 0.5);
+
+                deck.forEach((icon) => {
+                    const card = document.createElement('div');
+                    card.className = "h-24 sm:h-28 bg-space-950 border-2 border-slate-700 rounded-2xl flex items-center justify-center text-4xl cursor-pointer hover:border-pink-400 transition select-none shadow-md";
+                    card.innerText = icon;
+                    card.onclick = () => selectPreKCard(card, icon);
+                    grid.appendChild(card);
+                });
+            } else {
+                document.getElementById('memoryScore').innerText = `Parejas encontradas: 0 / 6`;
+                const pairs = currentGrade === 'p1_3' 
+                    ? [['🚀', '🚀'], ['🛸', '🛸'], ['🪐', '🪐'], ['⭐', '⭐'], ['👾', '👾'], ['👨‍🚀', '👨‍🚀']]
+                    : [['7 × 8', '56'], ['9 × 4', '36'], ['5 × 5', '25'], ['6 × 3', '18'], ['8 × 2', '16'], ['4 × 7', '28']];
+                
+                let deck = [];
+                pairs.forEach((pair, pairId) => {
+                    deck.push({ text: pair[0], pairId: pairId });
+                    deck.push({ text: pair[1], pairId: pairId });
+                });
+                deck.sort(() => Math.random() - 0.5);
+
+                deck.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = "h-20 sm:h-24 bg-space-950 border-2 border-slate-700 rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-bold text-white cursor-pointer hover:border-pink-400 transition select-none shadow-md";
+                    card.dataset.index = index;
+                    card.innerText = '❓';
+                    card.onclick = () => flipMemoryCard(card, item, index);
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        function selectPreKCard(cardEl, icon) {
+            if (cardEl.dataset.matched === 'true') return;
+
+            if (!prekSelectedCard) {
+                prekSelectedCard = { el: cardEl, icon: icon };
+                cardEl.classList.add('border-pink-400', 'bg-pink-950/60', 'scale-105');
+                speakSlow("Toca el otro que sea igual.");
+            } else {
+                if (prekSelectedCard.el === cardEl) return;
+
+                if (prekSelectedCard.icon === icon) {
+                    cardEl.classList.add('border-emerald-400', 'bg-emerald-950/40');
+                    prekSelectedCard.el.classList.add('border-emerald-400', 'bg-emerald-950/40');
+                    cardEl.dataset.matched = 'true';
+                    prekSelectedCard.el.dataset.matched = 'true';
+                    matchedPairs++;
+                    speakSlow("¡Súper! Son iguales.");
+                    prekSelectedCard = null;
+                    if (matchedPairs === 4) speakSlow("¡Felicidades! Encontraste todas las figuras.");
+                } else {
+                    prekSelectedCard.el.classList.remove('border-pink-400', 'bg-pink-950/60', 'scale-105');
+                    prekSelectedCard = null;
+                    speakSlow("Esos no son iguales, busca otro.");
+                }
+            }
+        }
+
+        function flipMemoryCard(cardEl, item, index) {
+            if (flippedCards.length >= 2 || cardEl.dataset.matched === 'true' || flippedCards.some(c => c.index === index)) return;
+
+            cardEl.innerText = item.text;
+            cardEl.classList.add('bg-pink-950/60', 'border-pink-400');
+            flippedCards.push({ el: cardEl, item: item, index: index });
+
+            if (flippedCards.length === 2) {
+                if (flippedCards[0].item.pairId === flippedCards[1].item.pairId) {
+                    flippedCards.forEach(c => {
+                        c.el.dataset.matched = 'true';
+                        c.el.classList.add('border-emerald-400', 'bg-emerald-950/40');
+                    });
+                    matchedPairs++;
+                    document.getElementById('memoryScore').innerText = `Parejas encontradas: ${matchedPairs} / 6`;
+                    flippedCards = [];
+                    speakSlow("¡Excelente pareja!");
+                } else {
+                    setTimeout(() => {
+                        flippedCards.forEach(c => {
+                            c.el.innerText = '❓';
+                            c.el.classList.remove('bg-pink-950/60', 'border-pink-400');
+                        });
+                        flippedCards = [];
+                    }, 1000);
+                }
+            }
+        }
+
+        // 3. BALANZA / MEZCLADOR MATEMÁTICO POR EDAD
+        const balanceCanvas = document.getElementById('balanceCanvas');
+        const balanceCtx = balanceCanvas ? balanceCanvas.getContext('2d') : null;
+        let leftWeight = 5;
+        let rightWeight = 0;
+        let prekPlanetColor = "#38bdf8";
+
+        function initBalanceGame() {
+            const buttonsContainer = document.getElementById('weightButtons');
+            if (!buttonsContainer) return;
+            buttonsContainer.innerHTML = '';
+
+            if (currentGrade === 'prek') {
+                const colors = [
+                    { name: 'Rojo 🔴', hex: '#f43f5e' },
+                    { name: 'Amarillo 💛', hex: '#f59e0b' },
+                    { name: 'Verde 💚', hex: '#10b981' },
+                    { name: 'Azul 💙', hex: '#38bdf8' },
+                    { name: 'Morado 💜', hex: '#a855f7' }
+                ];
+                colors.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white text-xs font-bold transition";
+                    btn.innerText = c.name;
+                    btn.onclick = () => { prekPlanetColor = c.hex; updatePreKPaintUI(c.name, true); };
+                    buttonsContainer.appendChild(btn);
+                });
+                updatePreKPaintUI("Azul 💙", false);
+            } else {
+                leftWeight = currentGrade === 'p1_3' ? Math.floor(Math.random() * 6) + 4 : Math.floor(Math.random() * 12) + 8;
+                rightWeight = 0;
+
+                const values = currentGrade === 'p1_3' ? [1, 2, 3, 4, 5] : [2, 4, 5, 8, 10];
+                values.forEach(num => {
+                    const btn = document.createElement('button');
+                    btn.className = "px-3 py-1.5 rounded-xl bg-emerald-600/40 hover:bg-emerald-600 border border-emerald-400 text-emerald-100 text-xs font-bold transition";
+                    btn.innerText = `+${num}`;
+                    btn.onclick = () => addRightWeight(num);
+                    buttonsContainer.appendChild(btn);
+                });
+                updateBalanceUI();
+            }
+        }
+
+        function updatePreKPaintUI(colorName, speakIt) {
+            if (!balanceCanvas || !balanceCtx) return;
+            balanceCanvas.width = 400;
+            balanceCanvas.height = 200;
+            balanceCtx.clearRect(0, 0, 400, 200);
+
+            balanceCtx.beginPath();
+            balanceCtx.arc(200, 100, 60, 0, Math.PI * 2);
+            balanceCtx.fillStyle = prekPlanetColor;
+            balanceCtx.fill();
+            balanceCtx.strokeStyle = "#ffffff";
+            balanceCtx.lineWidth = 4;
+            balanceCtx.stroke();
+
+            balanceCtx.beginPath();
+            balanceCtx.ellipse(200, 100, 90, 20, Math.PI / 6, 0, Math.PI * 2);
+            balanceCtx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            balanceCtx.lineWidth = 6;
+            balanceCtx.stroke();
+
+            document.getElementById('balanceFeedback').innerText = `¡Planeta pintado! Color: ${colorName}`;
+            if (speakIt) speakSlow("Pintaste el planeta de " + colorName);
+        }
+
+        function addRightWeight(val) {
+            rightWeight += val;
+            updateBalanceUI();
+        }
+
+        function resetBalanceTarget() {
+            initBalanceGame();
+            if (currentGrade !== 'prek') speakSlow("Nuevo reto numérico.");
+        }
+
+        function updateBalanceUI() {
+            if (!balanceCanvas || !balanceCtx) return;
+            balanceCanvas.width = 400;
+            balanceCanvas.height = 200;
+
+            balanceCtx.clearRect(0, 0, 400, 200);
+
+            const diff = rightWeight - leftWeight;
+            const tilt = Math.max(-0.25, Math.min(0.25, diff * 0.05));
+
+            balanceCtx.beginPath();
+            balanceCtx.moveTo(200, 180);
+            balanceCtx.lineTo(170, 190);
+            balanceCtx.lineTo(230, 190);
+            balanceCtx.closePath();
+            balanceCtx.fillStyle = "#475569";
+            balanceCtx.fill();
+
+            balanceCtx.beginPath();
+            balanceCtx.moveTo(200, 110);
+            balanceCtx.lineTo(200, 180);
+            balanceCtx.strokeStyle = "#64748b";
+            balanceCtx.lineWidth = 6;
+            balanceCtx.stroke();
+
+            balanceCtx.save();
+            balanceCtx.translate(200, 110);
+            balanceCtx.rotate(tilt);
+
+            balanceCtx.beginPath();
+            balanceCtx.moveTo(-130, 0);
+            balanceCtx.lineTo(130, 0);
+            balanceCtx.strokeStyle = "#10b981";
+            balanceCtx.lineWidth = 8;
+            balanceCtx.stroke();
+
+            balanceCtx.beginPath();
+            balanceCtx.arc(-130, 30, 30, 0, Math.PI);
+            balanceCtx.fillStyle = "#38bdf8";
+            balanceCtx.fill();
+            balanceCtx.fillStyle = "#ffffff";
+            balanceCtx.font = "bold 16px Outfit";
+            balanceCtx.textAlign = "center";
+            balanceCtx.fillText(leftWeight, -130, 25);
+
+            balanceCtx.beginPath();
+            balanceCtx.arc(130, 30, 30, 0, Math.PI);
+            balanceCtx.fillStyle = "#f59e0b";
+            balanceCtx.fill();
+            balanceCtx.fillStyle = "#ffffff";
+            balanceCtx.fillText(rightWeight, 130, 25);
+
+            balanceCtx.restore();
+
+            const feedback = document.getElementById('balanceFeedback');
+            if (diff === 0) {
+                feedback.innerText = "¡EQUILIBRIO PERFECTO! 🎉";
+                feedback.className = "text-xs font-extrabold text-emerald-400";
+                speakSlow("¡Felicidades! La balanza está en equilibrio.");
+            } else if (rightWeight > leftWeight) {
+                feedback.innerText = "Te pasaste. Reiniciando platillo derecho...";
+                feedback.className = "text-xs font-extrabold text-rose-400";
+                setTimeout(() => { rightWeight = 0; updateBalanceUI(); }, 1200);
+            } else {
+                feedback.innerText = `Faltan ${leftWeight - rightWeight} para equilibrar.`;
+                feedback.className = "text-xs font-extrabold text-amber-300";
+            }
+        }
+
+        // 4. CLASIFICADOR ADAPTADO POR EDAD
+        let classifierItems = [];
+        let selectedItemIndex = null;
+
+        function initClassifier() {
+            const pool = document.getElementById('itemPool');
+            const boxP = document.getElementById('boxPlanets');
+            const boxS = document.getElementById('boxStars');
+
+            if (!pool) return;
+            pool.innerHTML = '';
+            boxP.innerHTML = '';
+            boxS.innerHTML = '';
+            selectedItemIndex = null;
+
+            if (currentGrade === 'prek') {
+                document.getElementById('cat1Title').innerText = "🐶 ANIMALES DE TIERRA";
+                document.getElementById('cat2Title').innerText = "🦅 ANIMALES DEL CIELO";
+                classifierItems = [
+                    { name: "Perrito 🐶", type: "land" },
+                    { name: "Gatito 🐱", type: "land" },
+                    { name: "Pajarito 🐦", type: "sky" },
+                    { name: "Mariposa 🦋", type: "sky" }
+                ];
+            } else if (currentGrade === 'p1_3') {
+                document.getElementById('cat1Title').innerText = "🪐 PLANETAS";
+                document.getElementById('cat2Title').innerText = "⭐ ESTRELLAS";
+                classifierItems = [
+                    { name: "Tierra 🌍", type: "planet" },
+                    { name: "Marte 🔴", type: "planet" },
+                    { name: "Sol ☀️", type: "star" },
+                    { name: "Sirio ✨", type: "star" }
+                ];
+            } else {
+                document.getElementById('cat1Title').innerText = "🧊 SÓLIDOS";
+                document.getElementById('cat2Title').innerText = "💨 GASEOSOS";
+                classifierItems = [
+                    { name: "Hielo 🧊", type: "solid" },
+                    { name: "Roca 🪨", type: "solid" },
+                    { name: "Vapor 🌫️", type: "gas" },
+                    { name: "Oxígeno 💨", type: "gas" }
+                ];
+            }
+
+            classifierItems.forEach((item, i) => {
+                const badge = document.createElement('button');
+                badge.className = "px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-slate-100 transition shadow";
+                badge.innerText = item.name;
+                badge.onclick = () => selectClassifierItem(i, badge);
+                pool.appendChild(badge);
+            });
+        }
+
+        function selectClassifierItem(index, btnEl) {
+            document.querySelectorAll('#itemPool button').forEach(b => b.classList.remove('ring-2', 'ring-cyan-400', 'bg-cyan-900'));
+            btnEl.classList.add('ring-2', 'ring-cyan-400', 'bg-cyan-900');
+            selectedItemIndex = index;
+            speakSlow("Seleccionaste " + classifierItems[index].name + ". Ahora toca su caja.");
+        }
+
+        document.getElementById('catPlanets')?.addEventListener('click', () => classifyTo(0));
+        document.getElementById('catStars')?.addEventListener('click', () => classifyTo(1));
+
+        function classifyTo(categoryIdx) {
+            if (selectedItemIndex === null) return;
+
+            const item = classifierItems[selectedItemIndex];
+            let isCorrect = false;
+
+            if (currentGrade === 'prek') {
+                isCorrect = (categoryIdx === 0 && item.type === 'land') || (categoryIdx === 1 && item.type === 'sky');
+            } else if (currentGrade === 'p1_3') {
+                isCorrect = (categoryIdx === 0 && item.type === 'planet') || (categoryIdx === 1 && item.type === 'star');
+            } else {
+                isCorrect = (categoryIdx === 0 && item.type === 'solid') || (categoryIdx === 1 && item.type === 'gas');
+            }
+
+            if (isCorrect) {
+                const targetBox = categoryIdx === 0 ? document.getElementById('boxPlanets') : document.getElementById('boxStars');
+                const tag = document.createElement('span');
+                tag.className = "px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-bold";
+                tag.innerText = item.name;
+                targetBox.appendChild(tag);
+
+                const buttons = document.querySelectorAll('#itemPool button');
+                buttons.forEach(b => {
+                    if (b.innerText === item.name) b.remove();
+                });
+
+                speakSlow("¡Muy bien! " + item.name + " está en su lugar.");
+                selectedItemIndex = null;
+            } else {
+                speakSlow("Prueba en la otra caja.");
+            }
+        }
+
+        // 5. CAZA-ATENCIÓN / GLOBOS
+        let whackScore = 0;
+        let activeCrater = -1;
+        let whackTimer = null;
+        let isWhackActive = false;
+
+        function startWhackGame() {
+            clearTimeout(whackTimer);
+            whackScore = 0;
+            document.getElementById('whackScore').innerText = "Puntos: 0";
+            isWhackActive = true;
+            document.getElementById('whackStartBtn').innerText = "En juego...";
+
+            if (currentGrade === 'prek') speakSlow("¡Toca todos los globos que aparezcan!");
+            else speakSlow("¡Atento! Toca los elementos correctos.");
+
+            nextWhackTurn();
+        }
+
+        function nextWhackTurn() {
+            if (!isWhackActive) return;
+
+            for (let i = 0; i < 6; i++) {
+                document.getElementById(`crater-${i}`).innerText = '🕳️';
+            }
+
+            activeCrater = Math.floor(Math.random() * 6);
+            const craterEl = document.getElementById(`crater-${activeCrater}`);
+
+            if (currentGrade === 'prek') {
+                const balloons = ['🎈', '🔴', '🟡', '🟢', '🔵', '🟣'];
+                craterEl.innerText = balloons[Math.floor(Math.random() * balloons.length)];
+            } else if (currentGrade === 'p1_3') {
+                craterEl.innerText = Math.random() > 0.3 ? '⭐' : '🪨';
+            } else {
+                craterEl.innerText = Math.random() > 0.4 ? '⚡' : '💣';
+            }
+
+            const speed = currentGrade === 'prek' ? 2000 : (currentGrade === 'p1_3' ? 1400 : 900);
+
+            whackTimer = setTimeout(() => {
+                if (isWhackActive) nextWhackTurn();
+            }, speed);
+        }
+
+        function hitCrater(index) {
+            if (!isWhackActive || index !== activeCrater) return;
+
+            clearTimeout(whackTimer);
+            const text = document.getElementById(`crater-${index}`).innerText;
+
+            if (currentGrade === 'prek') {
+                whackScore += 10;
+                speakSlow("¡Pop!");
+            } else if (currentGrade === 'p1_3') {
+                if (text === '⭐') { whackScore += 10; speakSlow("¡Bien!"); }
+                else { whackScore = Math.max(0, whackScore - 5); speakSlow("Era una roca."); }
+            } else {
+                if (text === '⚡') { whackScore += 15; speakSlow("¡Rápido!"); }
+                else { whackScore = Math.max(0, whackScore - 10); speakSlow("¡Cuidado!"); }
+            }
+
+            document.getElementById('whackScore').innerText = `Puntos: ${whackScore}`;
+            nextWhackTurn();
+        }
+
+        // INICIALIZACIÓN XPLORA
+        window.addEventListener('load', () => {
+            setGrade('prek');
+            setTimeout(() => {
+                speakSlow("¡Bienvenido a Xplora! Selecciona el grado para adaptar los juegos.");
+            }, 600);
+        });
+    </script>
+</body>
+</html>
